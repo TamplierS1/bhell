@@ -19,7 +19,7 @@ public:
     template <class U>
     constexpr Vec2 operator*(const U& scale) const
     {
-        return Vec2{x * scale, y * scale};
+        return Vec2{x * static_cast<T>(scale), y * static_cast<T>(scale)};
     }
 
     template <class U>

@@ -1,1 +1,0 @@
-target_sources(bhell PRIVATE main.cpp game.cpp world.cpp texture_manager.cpp actor.cpp)

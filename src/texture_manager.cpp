@@ -1,9 +1,9 @@
-#include <experimental/filesystem>
-#include <SDL2/SDL_image.h>
+#include <filesystem>
+#include <SDL_image.h>
 
 #include "texture_manager.h"
 
-namespace fs = std::experimental::filesystem;
+namespace fs = std::filesystem;
 
 void TexMan::load_textures(const std::string& path, SDL_Renderer* renderer)
 {
@@ -14,7 +14,7 @@ void TexMan::load_textures(const std::string& path, SDL_Renderer* renderer)
             if (entry.path().extension() == ".png")
             {
                 SDL_Texture* new_texture = nullptr;
-                SDL_Surface* loaded_surface = IMG_Load(entry.path().c_str());
+                SDL_Surface* loaded_surface = IMG_Load(entry.path().generic_string().c_str());
 
                 if (loaded_surface == nullptr)
                 {
@@ -32,7 +32,8 @@ void TexMan::load_textures(const std::string& path, SDL_Renderer* renderer)
                     continue;
                 }
 
-                textures[entry.path().stem()] = std::make_shared<Texture>(
+                textures[entry.path().stem().generic_string()] =
+                    std::make_shared<Texture>(
                     new_texture, Vec2i{loaded_surface->w, loaded_surface->h});
 
                 SDL_FreeSurface(loaded_surface);

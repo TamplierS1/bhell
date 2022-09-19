@@ -85,6 +85,11 @@ void World::handle_input(SDL_Rect viewport)
         player.move(Vec2i{0, 1}, delta);
     }
 
+    if (key_states[SDL_SCANCODE_ESCAPE])
+    {
+        running = false;
+    }
+
     Vec2i player_texture_size = TexMan::get().texture("spaceship").value()->size;
     if (player.pos.x < 0)
     {
