@@ -2,6 +2,8 @@
 
 #include "game.h"
 
+#undef main
+
 int main()
 {
     try
