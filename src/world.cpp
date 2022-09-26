@@ -3,34 +3,43 @@
 
 World::World()
     : player(Actor{"spaceship", Vec2i{10, 10}, 3.0f})
+    , viewport(SDL_Rect{})
 {
 }
 
-void World::run(SDL_Renderer* renderer, SDL_Rect viewport)
+void World::run(SDL_Renderer* renderer, SDL_Rect game_viewport)
 {
+    viewport = game_viewport;
     while (running)
     {
         clock.tick();
 
         handle_events();
-        handle_input(viewport);
+        handle_input();
 
-        render_world(renderer, viewport);
+        spawn_bullets();
+        move_bullets();
+        despawn_bullets();
+
+        render_world(renderer);
     }
 }
 
-void World::render_world(SDL_Renderer* renderer, SDL_Rect viewport)
+void World::render_world(SDL_Renderer* renderer)
 {
     SDL_RenderClear(renderer);
-
     SDL_RenderSetViewport(renderer, &viewport);
 
     for (const auto& actor : actors)
     {
         render(renderer, actor);
     }
-
     render(renderer, player);
+
+    for (const auto& bullet : bullets)
+    {
+        render(renderer, bullet);
+    }
 
     SDL_RenderPresent(renderer);
 }
@@ -40,6 +49,8 @@ void World::render(SDL_Renderer* renderer, const Actor& actor)
     auto texture = TexMan::get().texture(actor.texture_name);
     if (!texture.has_value())
     {
+        printf("Failed to render an actor! Texture %s does not exist.\n",
+               actor.texture_name.c_str());
         return;
     }
 
@@ -64,7 +75,7 @@ void World::handle_events()
     }
 }
 
-void World::handle_input(SDL_Rect viewport)
+void World::handle_input()
 {
     const Uint8* key_states = SDL_GetKeyboardState(NULL);
     float delta = clock.get_delta();
@@ -108,4 +119,59 @@ void World::handle_input(SDL_Rect viewport)
     {
         player.pos.y = viewport.h - player_texture_size.y;
     }
+}
+
+void World::spawn_bullets()
+{
+    static float time_threshold = 0.f;
+    time_threshold += clock.get_delta();
+    
+    if (time_threshold >= 50.f)
+    {
+        time_threshold = 0.f;
+        spawn_bullet(player);
+    }
+}
+
+void World::spawn_bullet(const Actor& shooter)
+{
+    Vec2i spawn_pos = {shooter.pos.x, shooter.pos.y - 2};
+    bullets.emplace_back("bullet", spawn_pos, 5.f);
+}
+
+void World::despawn_bullets()
+{
+    std::vector<int> dead_bullets_idx;
+
+    for (int i = 0; i < bullets.size();i++)
+    {
+        if (is_out_of_bounds(bullets[i]))
+        {
+            dead_bullets_idx.emplace_back(i);
+        }
+    }
+
+    for (const auto idx : dead_bullets_idx)
+    {
+        bullets.erase(bullets.begin() + idx);
+    }
+}
+
+void World::move_bullets()
+{
+    for (auto& bullet : bullets)
+    {
+        bullet.move(Vec2i{0, -1}, clock.get_delta());
+    }
+}
+
+bool World::is_out_of_bounds(const Actor& actor)
+{
+    Vec2i texture_size = TexMan::get().texture(actor.texture_name).value()->size;
+
+    // We'll wait until the whole texture is out_of_bounds
+    return actor.pos.x + texture_size.x < 0 ||
+        actor.pos.x > viewport.w ||
+        actor.pos.y + texture_size.y < 0 ||
+        actor.pos.y > viewport.h;
 }
