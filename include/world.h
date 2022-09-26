@@ -21,11 +21,12 @@ private:
     void handle_input();
 
     void spawn_bullets();
-    void spawn_bullet(const Actor& shooter);
     void despawn_bullets();
     void move_bullets();
 
-    bool is_out_of_bounds(const Actor& actor);
+    void spawn_enemies();
+    void despawn_enemies();
+    void move_enemies();
 
     std::vector<Actor> actors;
     std::vector<Actor> bullets;

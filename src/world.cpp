@@ -1,10 +1,13 @@
+#include <random>
+
 #include "world.h"
 #include "texture_manager.h"
 
 World::World()
-    : player(Actor{"spaceship", Vec2i{10, 10}, 3.0f})
+    : player(Actor{"player_spaceship", Vec2i{10, 10}, 5.0f})
     , viewport(SDL_Rect{})
 {
+    srand(time(NULL));
 }
 
 void World::run(SDL_Renderer* renderer, SDL_Rect game_viewport)
@@ -17,9 +20,14 @@ void World::run(SDL_Renderer* renderer, SDL_Rect game_viewport)
         handle_events();
         handle_input();
 
+        spawn_enemies();
         spawn_bullets();
+
+        move_enemies();
         move_bullets();
+
         despawn_bullets();
+        despawn_enemies();
 
         render_world(renderer);
     }
@@ -101,23 +109,23 @@ void World::handle_input()
         running = false;
     }
 
-    Vec2i player_texture_size = TexMan::get().texture("spaceship").value()->size;
+    static Vec2i texture_size = TexMan::get().texture("player_spaceship").value()->size;
     if (player.pos.x < 0)
     {
         player.pos.x = 0;
     }
-    else if (player.pos.x > viewport.w - player_texture_size.x)
+    else if (player.pos.x > viewport.w - texture_size.x)
     {
-        player.pos.x = viewport.w - player_texture_size.x;
+        player.pos.x = viewport.w - texture_size.x;
     }
 
     if (player.pos.y < 0)
     {
         player.pos.y = 0;
     }
-    else if (player.pos.y > viewport.h - player_texture_size.y)
+    else if (player.pos.y > viewport.h - texture_size.y)
     {
-        player.pos.y = viewport.h - player_texture_size.y;
+        player.pos.y = viewport.h - texture_size.y;
     }
 }
 
@@ -125,27 +133,24 @@ void World::spawn_bullets()
 {
     static float time_threshold = 0.f;
     time_threshold += clock.get_delta();
-    
+
     if (time_threshold >= 50.f)
     {
         time_threshold = 0.f;
-        spawn_bullet(player);
+        Vec2i spawn_pos = {player.pos.x, player.pos.y - 2};
+        bullets.emplace_back("bullet", spawn_pos, 5.f);
     }
-}
-
-void World::spawn_bullet(const Actor& shooter)
-{
-    Vec2i spawn_pos = {shooter.pos.x, shooter.pos.y - 2};
-    bullets.emplace_back("bullet", spawn_pos, 5.f);
 }
 
 void World::despawn_bullets()
 {
     std::vector<int> dead_bullets_idx;
 
-    for (int i = 0; i < bullets.size();i++)
+    static Vec2i texture_size = TexMan::get().texture("bullet").value()->size;
+    for (int i = 0; i < bullets.size(); i++)
     {
-        if (is_out_of_bounds(bullets[i]))
+        if (bullets[i].pos.x + texture_size.x < 0 || bullets[i].pos.x > viewport.w ||
+            bullets[i].pos.y + texture_size.y < 0 || bullets[i].pos.y > viewport.h)
         {
             dead_bullets_idx.emplace_back(i);
         }
@@ -165,13 +170,44 @@ void World::move_bullets()
     }
 }
 
-bool World::is_out_of_bounds(const Actor& actor)
+void World::spawn_enemies()
 {
-    Vec2i texture_size = TexMan::get().texture(actor.texture_name).value()->size;
+    static float time_threshold = 0.f;
+    time_threshold += clock.get_delta();
 
-    // We'll wait until the whole texture is out_of_bounds
-    return actor.pos.x + texture_size.x < 0 ||
-        actor.pos.x > viewport.w ||
-        actor.pos.y + texture_size.y < 0 ||
-        actor.pos.y > viewport.h;
+    static Vec2i texture_size = TexMan::get().texture("enemy_spaceship").value()->size;
+    if (time_threshold >= 300.f)
+    {
+        time_threshold = 0.f;
+        Vec2i pos{rand() % (viewport.w - texture_size.x - 10) + texture_size.x,
+                  0 - texture_size.y};
+        actors.emplace_back("enemy_spaceship", pos, 3.f);
+    }
+}
+
+void World::despawn_enemies()
+{
+    std::vector<int> dead_enemies_idx;
+
+    static Vec2i texture_size = TexMan::get().texture("enemy_spaceship").value()->size;
+    for (int i = 0; i < actors.size(); i++)
+    {
+        if (actors[i].pos.y > viewport.h)
+        {
+            dead_enemies_idx.emplace_back(i);
+        }
+    }
+
+    for (const auto idx : dead_enemies_idx)
+    {
+        actors.erase(actors.begin() + idx);
+    }
+}
+
+void World::move_enemies()
+{
+    for (auto& enemy : actors)
+    {
+        enemy.move(Vec2i{0, 1}, clock.get_delta());
+    }
 }
