@@ -167,7 +167,8 @@
     <ClInclude Include="include\world.h" />
   </ItemGroup>
   <ItemGroup>
-    <Image Include="assets\spaceship.png" />
+    <Image Include="assets\enemy_spaceship.png" />
+    <Image Include="assets\player_spaceship.png" />
     <Image Include="assets\bullet.png" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
