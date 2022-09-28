@@ -4,7 +4,7 @@
 #include "texture_manager.h"
 
 World::World()
-    : player(Actor{"player_spaceship", Vec2i{10, 10}, 5.0f})
+    : player(Destructible{"player_spaceship", Vec2i{10, 10}, 5.0f, 30, 100})
     , viewport(SDL_Rect{})
 {
     srand(time(NULL));
@@ -26,6 +26,8 @@ void World::run(SDL_Renderer* renderer, SDL_Rect game_viewport)
         move_enemies();
         move_bullets();
 
+        check_collisions();
+
         despawn_bullets();
         despawn_enemies();
 
@@ -40,13 +42,13 @@ void World::render_world(SDL_Renderer* renderer)
 
     for (const auto& actor : actors)
     {
-        render(renderer, actor);
+        render(renderer, *actor);
     }
     render(renderer, player);
 
     for (const auto& bullet : bullets)
     {
-        render(renderer, bullet);
+        render(renderer, *bullet);
     }
 
     SDL_RenderPresent(renderer);
@@ -131,14 +133,45 @@ void World::handle_input()
 
 void World::spawn_bullets()
 {
-    static float time_threshold = 0.f;
-    time_threshold += clock.get_delta();
-
-    if (time_threshold >= 50.f)
+    // Player
     {
-        time_threshold = 0.f;
-        Vec2i spawn_pos = {player.pos.x, player.pos.y - 2};
-        bullets.emplace_back("bullet", spawn_pos, 5.f);
+        static float time_threshold = 0.f;
+        time_threshold += clock.get_delta();
+
+        if (time_threshold >= 50.f)
+        {
+            time_threshold = 0.f;
+
+            // Player' bullets
+            Vec2i spawn_pos = {player.pos.x, player.pos.y - 2};
+            bullets.emplace_back(std::make_shared<Destructible>(
+                "player_bullet", spawn_pos, 5.f, player.damage, 10));
+        }
+    }
+
+    // Enemies
+    {
+        static float time_threshold = 0.f;
+        time_threshold += clock.get_delta();
+
+        if (time_threshold >= 150.f)
+        {
+            time_threshold = 0.f;
+
+            Vec2i texture_size = TexMan::get().texture("bullet").value()->size;
+            // Enemies' bullets
+            for (auto& enemy : actors)
+            {
+                Destructible* enemy_ptr = dynamic_cast<Destructible*>(enemy.get());
+                if (enemy_ptr == nullptr)
+                    continue;
+
+                Vec2i spawn_pos = {enemy_ptr->pos.x,
+                                   enemy_ptr->pos.y + texture_size.y + 2};
+                bullets.emplace_back(std::make_shared<Destructible>(
+                    "bullet", spawn_pos, -5.f, enemy_ptr->damage, 10));
+            }
+        }
     }
 }
 
@@ -149,8 +182,9 @@ void World::despawn_bullets()
     static Vec2i texture_size = TexMan::get().texture("bullet").value()->size;
     for (int i = 0; i < bullets.size(); i++)
     {
-        if (bullets[i].pos.x + texture_size.x < 0 || bullets[i].pos.x > viewport.w ||
-            bullets[i].pos.y + texture_size.y < 0 || bullets[i].pos.y > viewport.h)
+        if (bullets[i]->pos.x + texture_size.x < 0 || bullets[i]->pos.x > viewport.w ||
+            bullets[i]->pos.y + texture_size.y < 0 || bullets[i]->pos.y > viewport.h ||
+            bullets[i]->health <= 0)
         {
             dead_bullets_idx.emplace_back(i);
         }
@@ -166,7 +200,7 @@ void World::move_bullets()
 {
     for (auto& bullet : bullets)
     {
-        bullet.move(Vec2i{0, -1}, clock.get_delta());
+        bullet->move(Vec2i{0, -1}, clock.get_delta());
     }
 }
 
@@ -181,7 +215,8 @@ void World::spawn_enemies()
         time_threshold = 0.f;
         Vec2i pos{rand() % (viewport.w - texture_size.x - 10) + texture_size.x,
                   0 - texture_size.y};
-        actors.emplace_back("enemy_spaceship", pos, 3.f);
+        actors.emplace_back(
+            std::make_shared<Destructible>("enemy_spaceship", pos, 3.f, 20, 10));
     }
 }
 
@@ -192,7 +227,13 @@ void World::despawn_enemies()
     static Vec2i texture_size = TexMan::get().texture("enemy_spaceship").value()->size;
     for (int i = 0; i < actors.size(); i++)
     {
-        if (actors[i].pos.y > viewport.h)
+        if (actors[i]->pos.y > viewport.h)
+        {
+            dead_enemies_idx.emplace_back(i);
+        }
+
+        auto enemy_ptr = dynamic_cast<Destructible*>(actors[i].get());
+        if (enemy_ptr != nullptr && enemy_ptr->health <= 0)
         {
             dead_enemies_idx.emplace_back(i);
         }
@@ -208,6 +249,54 @@ void World::move_enemies()
 {
     for (auto& enemy : actors)
     {
-        enemy.move(Vec2i{0, 1}, clock.get_delta());
+        enemy->move(Vec2i{0, 1}, clock.get_delta());
+    }
+}
+
+bool rect_rect_collision(SDL_Rect rect1, SDL_Rect rect2)
+{
+    return rect1.x < rect2.x + rect2.w && rect1.x + rect1.w > rect2.x &&
+           rect1.y < rect2.y + rect2.h && rect1.h + rect1.y > rect2.y;
+}
+
+void World::check_collisions()
+{
+    static Vec2i bullet_tex_size = TexMan::get().texture("bullet").value()->size;
+    static Vec2i enemy_tex_size = TexMan::get().texture("enemy_spaceship").value()->size;
+    static Vec2i player_tex_size =
+        TexMan::get().texture("player_spaceship").value()->size;
+    for (auto& bullet : bullets)
+    {
+        // Player bullets with enemies
+        if (bullet->texture_name == "player_bullet")
+        {
+            for (auto& enemy : actors)
+            {
+                auto enemy_ptr = dynamic_cast<Destructible*>(enemy.get());
+                if (enemy_ptr == nullptr)
+                    continue;
+
+                if (rect_rect_collision(SDL_Rect{bullet->pos.x, bullet->pos.y,
+                                                 bullet_tex_size.x, bullet_tex_size.y},
+                                        SDL_Rect{enemy_ptr->pos.x, enemy_ptr->pos.y,
+                                                 enemy_tex_size.x, enemy_tex_size.y}))
+                {
+                    enemy_ptr->health -= bullet->damage;
+                    bullet->health = 0;
+                }
+            }
+        }
+        // Enemy bullets with player
+        else if (bullet->texture_name == "bullet")
+        {
+            if (rect_rect_collision(SDL_Rect{bullet->pos.x, bullet->pos.y,
+                                             bullet_tex_size.x, bullet_tex_size.y},
+                                    SDL_Rect{player.pos.x, player.pos.y,
+                                             player_tex_size.x, player_tex_size.y}))
+            {
+                player.health -= bullet->damage;
+                bullet->health = 0;
+            }
+        }
     }
 }
