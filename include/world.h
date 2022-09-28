@@ -2,8 +2,9 @@
 
 #include <SDL.h>
 #include <vector>
+#include <memory>
 
-#include "actor.h"
+#include "destructible.h"
 #include "clock.h"
 
 class World
@@ -28,9 +29,11 @@ private:
     void despawn_enemies();
     void move_enemies();
 
-    std::vector<Actor> actors;
-    std::vector<Actor> bullets;
-    Actor player;
+    void check_collisions();
+
+    std::vector<std::shared_ptr<Actor>> actors;
+    std::vector<std::shared_ptr<Destructible>> bullets;
+    Destructible player;
 
     Clock clock;
     bool running = true;

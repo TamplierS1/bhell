@@ -14,6 +14,7 @@ public:
         , texture_name(texture_name)
     {
     }
+    virtual ~Actor() = default;
 
     void move(Vec2i direction, float delta);
 

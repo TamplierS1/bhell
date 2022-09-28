@@ -162,6 +162,7 @@
     <ClInclude Include="include\actor.h" />
     <ClInclude Include="include\clock.h" />
     <ClInclude Include="include\game.h" />
+    <ClInclude Include="include\destructible.h" />
     <ClInclude Include="include\texture_manager.h" />
     <ClInclude Include="include\vec2.h" />
     <ClInclude Include="include\world.h" />
@@ -170,6 +171,7 @@
     <Image Include="assets\enemy_spaceship.png" />
     <Image Include="assets\player_spaceship.png" />
     <Image Include="assets\bullet.png" />
+    <Image Include="assets\player_bullet.png" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">
