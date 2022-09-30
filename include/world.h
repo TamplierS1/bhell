@@ -24,8 +24,9 @@ public:
 
 private:
     void render_world(SDL_Renderer* renderer);
-    void render(SDL_Renderer* renderer, const Actor& actor);
+    void render_actor(SDL_Renderer* renderer, const Actor& actor);
     void render_gameover_menu(SDL_Renderer* renderer);
+    void render_score(SDL_Renderer* renderer);
 
     void handle_events();
     void handle_input();
@@ -45,6 +46,8 @@ private:
     std::vector<std::shared_ptr<Actor>> actors;
     std::vector<std::shared_ptr<Destructible>> bullets;
     Destructible player;
+
+    unsigned int player_score = 0;
 
     Clock clock;
     GameState state;
