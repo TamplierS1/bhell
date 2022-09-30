@@ -5,6 +5,7 @@
 
 World::World()
     : player(Destructible{"player_spaceship", Vec2i{10, 10}, 5.0f, 30, 100})
+    , state(GameState::Playing)
     , viewport(SDL_Rect{})
 {
     srand(time(NULL));
@@ -12,6 +13,8 @@ World::World()
 
 void World::run(SDL_Renderer* renderer, SDL_Rect game_viewport)
 {
+    font_renderer = std::make_unique<FontRenderer>(TexMan::get().font(), Vec2i{25, 25});
+
     viewport = game_viewport;
     while (running)
     {
@@ -20,18 +23,32 @@ void World::run(SDL_Renderer* renderer, SDL_Rect game_viewport)
         handle_events();
         handle_input();
 
-        spawn_enemies();
-        spawn_bullets();
+        switch (state)
+        {
+            case GameState::Playing:
 
-        move_enemies();
-        move_bullets();
+                spawn_enemies();
+                spawn_bullets();
 
-        check_collisions();
+                move_enemies();
+                move_bullets();
 
-        despawn_bullets();
-        despawn_enemies();
+                check_collisions();
 
-        render_world(renderer);
+                if (player.health <= 0)
+                    state = GameState::GameOver;
+
+                despawn_bullets();
+                despawn_enemies();
+
+                render_world(renderer);
+                break;
+            case GameState::GameOver:
+                render_gameover_menu(renderer);
+                break;
+            default:
+                break;
+        }
     }
 }
 
@@ -39,7 +56,6 @@ void World::render_world(SDL_Renderer* renderer)
 {
     SDL_RenderClear(renderer);
     SDL_RenderSetViewport(renderer, &viewport);
-
     for (const auto& actor : actors)
     {
         render(renderer, *actor);
@@ -73,6 +89,25 @@ void World::render(SDL_Renderer* renderer, const Actor& actor)
     }
 }
 
+void World::render_gameover_menu(SDL_Renderer* renderer)
+{
+    SDL_RenderClear(renderer);
+    SDL_RenderSetViewport(renderer, &viewport);
+
+    std::string msg = "GAME OVER";
+    Vec2i font_size = font_renderer->font_size();
+    Vec2i pos = Vec2i{static_cast<int>((viewport.w - (font_size.x * msg.size()))) / 2,
+                      (viewport.h - font_size.y) / 2};
+    font_renderer->render_text(renderer, msg, pos);
+
+    msg = "PRESS R TO RESTART";
+    pos = Vec2i{static_cast<int>((viewport.w - (font_size.x * msg.size()))) / 2,
+                (viewport.h - font_size.y) / 2 + font_size.y * 2};
+    font_renderer->render_text(renderer, msg, pos);
+
+    SDL_RenderPresent(renderer);
+}
+
 void World::handle_events()
 {
     SDL_Event e;
@@ -89,45 +124,57 @@ void World::handle_input()
 {
     const Uint8* key_states = SDL_GetKeyboardState(NULL);
     float delta = clock.get_delta();
-    if (key_states[SDL_SCANCODE_W])
-    {
-        player.move(Vec2i{0, -1}, delta);
-    }
-    if (key_states[SDL_SCANCODE_A])
-    {
-        player.move(Vec2i{-1, 0}, delta);
-    }
-    if (key_states[SDL_SCANCODE_D])
-    {
-        player.move(Vec2i{1, 0}, delta);
-    }
-    if (key_states[SDL_SCANCODE_S])
-    {
-        player.move(Vec2i{0, 1}, delta);
-    }
 
-    if (key_states[SDL_SCANCODE_ESCAPE])
+    if (state == GameState::GameOver)
     {
-        running = false;
+        if (key_states[SDL_SCANCODE_R])
+        {
+            restart_game();
+        }
     }
+    else if (state == GameState::Playing)
+    {
+        if (key_states[SDL_SCANCODE_W])
+        {
+            player.move(Vec2i{0, -1}, delta);
+        }
+        if (key_states[SDL_SCANCODE_A])
+        {
+            player.move(Vec2i{-1, 0}, delta);
+        }
+        if (key_states[SDL_SCANCODE_D])
+        {
+            player.move(Vec2i{1, 0}, delta);
+        }
+        if (key_states[SDL_SCANCODE_S])
+        {
+            player.move(Vec2i{0, 1}, delta);
+        }
 
-    static Vec2i texture_size = TexMan::get().texture("player_spaceship").value()->size;
-    if (player.pos.x < 0)
-    {
-        player.pos.x = 0;
-    }
-    else if (player.pos.x > viewport.w - texture_size.x)
-    {
-        player.pos.x = viewport.w - texture_size.x;
-    }
+        if (key_states[SDL_SCANCODE_ESCAPE])
+        {
+            running = false;
+        }
 
-    if (player.pos.y < 0)
-    {
-        player.pos.y = 0;
-    }
-    else if (player.pos.y > viewport.h - texture_size.y)
-    {
-        player.pos.y = viewport.h - texture_size.y;
+        static Vec2i texture_size =
+            TexMan::get().texture("player_spaceship").value()->size;
+        if (player.pos.x < 0)
+        {
+            player.pos.x = 0;
+        }
+        else if (player.pos.x > viewport.w - texture_size.x)
+        {
+            player.pos.x = viewport.w - texture_size.x;
+        }
+
+        if (player.pos.y < 0)
+        {
+            player.pos.y = 0;
+        }
+        else if (player.pos.y > viewport.h - texture_size.y)
+        {
+            player.pos.y = viewport.h - texture_size.y;
+        }
     }
 }
 
@@ -299,4 +346,13 @@ void World::check_collisions()
             }
         }
     }
+}
+
+void World::restart_game()
+{
+    bullets.clear();
+    actors.clear();
+    player.health = 100;
+
+    state = GameState::Playing;
 }
