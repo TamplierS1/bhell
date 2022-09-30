@@ -23,6 +23,8 @@ void World::run(SDL_Renderer* renderer, SDL_Rect game_viewport)
         handle_events();
         handle_input();
 
+        SDL_RenderClear(renderer);
+        SDL_RenderSetViewport(renderer, &viewport);
         switch (state)
         {
             case GameState::Playing:
@@ -42,6 +44,7 @@ void World::run(SDL_Renderer* renderer, SDL_Rect game_viewport)
                 despawn_enemies();
 
                 render_world(renderer);
+                render_score(renderer);
                 break;
             case GameState::GameOver:
                 render_gameover_menu(renderer);
@@ -49,28 +52,25 @@ void World::run(SDL_Renderer* renderer, SDL_Rect game_viewport)
             default:
                 break;
         }
+        SDL_RenderPresent(renderer);
     }
 }
 
 void World::render_world(SDL_Renderer* renderer)
 {
-    SDL_RenderClear(renderer);
-    SDL_RenderSetViewport(renderer, &viewport);
     for (const auto& actor : actors)
     {
-        render(renderer, *actor);
+        render_actor(renderer, *actor);
     }
-    render(renderer, player);
+    render_actor(renderer, player);
 
     for (const auto& bullet : bullets)
     {
-        render(renderer, *bullet);
+        render_actor(renderer, *bullet);
     }
-
-    SDL_RenderPresent(renderer);
 }
 
-void World::render(SDL_Renderer* renderer, const Actor& actor)
+void World::render_actor(SDL_Renderer* renderer, const Actor& actor)
 {
     auto texture = TexMan::get().texture(actor.texture_name);
     if (!texture.has_value())
@@ -91,9 +91,6 @@ void World::render(SDL_Renderer* renderer, const Actor& actor)
 
 void World::render_gameover_menu(SDL_Renderer* renderer)
 {
-    SDL_RenderClear(renderer);
-    SDL_RenderSetViewport(renderer, &viewport);
-
     std::string msg = "GAME OVER";
     Vec2i font_size = font_renderer->font_size();
     Vec2i pos = Vec2i{static_cast<int>((viewport.w - (font_size.x * msg.size()))) / 2,
@@ -104,8 +101,11 @@ void World::render_gameover_menu(SDL_Renderer* renderer)
     pos = Vec2i{static_cast<int>((viewport.w - (font_size.x * msg.size()))) / 2,
                 (viewport.h - font_size.y) / 2 + font_size.y * 2};
     font_renderer->render_text(renderer, msg, pos);
+}
 
-    SDL_RenderPresent(renderer);
+void World::render_score(SDL_Renderer* renderer)
+{
+    font_renderer->render_text(renderer, std::to_string(player_score), Vec2i{0, 0});
 }
 
 void World::handle_events()
@@ -239,6 +239,8 @@ void World::despawn_bullets()
 
     for (const auto idx : dead_bullets_idx)
     {
+        if (idx >= bullets.size())
+            continue;
         bullets.erase(bullets.begin() + idx);
     }
 }
@@ -282,6 +284,7 @@ void World::despawn_enemies()
         auto enemy_ptr = dynamic_cast<Destructible*>(actors[i].get());
         if (enemy_ptr != nullptr && enemy_ptr->health <= 0)
         {
+            player_score += 100;
             dead_enemies_idx.emplace_back(i);
         }
     }
@@ -353,6 +356,7 @@ void World::restart_game()
     bullets.clear();
     actors.clear();
     player.health = 100;
+    player_score = 0;
 
     state = GameState::Playing;
 }
