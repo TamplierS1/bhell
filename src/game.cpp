@@ -1,4 +1,5 @@
 #include <SDL_image.h>
+#include <SDL_ttf.h>
 #include <string>
 #include <stdexcept>
 
@@ -37,12 +38,22 @@ Game::Game()
                                  std::string(IMG_GetError()));
     }
 
+    if (TTF_Init() < 0)
+    {
+        throw std::runtime_error("SDL_ttf failed to initialize! SDL_ttf error: %s\n" +
+                                 std::string(TTF_GetError()));
+    }
+    TexMan::get().load_font("assets/font.ttf", 18);
+
     TexMan::get().load_textures("assets", renderer);
 }
 
 Game::~Game()
 {
+    TexMan::get().free_assets();
+
     IMG_Quit();
+    TTF_Quit();
 
     SDL_DestroyRenderer(renderer);
     SDL_DestroyWindow(window);

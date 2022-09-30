@@ -112,13 +112,13 @@
       <ConformanceMode>true</ConformanceMode>
       <LanguageStandard>stdcpplatest</LanguageStandard>
       <LanguageStandard_C>stdc17</LanguageStandard_C>
-      <AdditionalIncludeDirectories>$(SolutionDir)\third_party\SDL2\include;$(SolutionDir)\include;$(SolutionDir)\third_party\SDL2_image\include</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(SolutionDir)\third_party\SDL2\include;$(SolutionDir)\include;$(SolutionDir)\third_party\SDL2_image\include;$(SolutionDir)\third_party\SDL2_ttf\include</AdditionalIncludeDirectories>
       <DisableSpecificWarnings>2398;</DisableSpecificWarnings>
     </ClCompile>
     <Link>
       <SubSystem>Console</SubSystem>
       <GenerateDebugInformation>true</GenerateDebugInformation>
-      <AdditionalDependencies>$(SolutionDir)\third_party\SDL2\lib\x64\SDL2.lib;$(SolutionDir)\third_party\SDL2_image\lib\x64\SDL2_image.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies>$(SolutionDir)\third_party\SDL2\lib\x64\SDL2.lib;$(SolutionDir)\third_party\SDL2_image\lib\x64\SDL2_image.lib;$(SolutionDir)\third_party\SDL2_ttf\lib\x64\SDL2_ttf.lib;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
@@ -150,9 +150,11 @@
     <None Include="README.md" />
     <None Include="SDL2.dll" />
     <None Include="SDL2_image.dll" />
+    <None Include="SDL2_ttf.dll" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="src\actor.cpp" />
+    <ClCompile Include="src\font_renderer.cpp" />
     <ClCompile Include="src\game.cpp" />
     <ClCompile Include="src\main.cpp" />
     <ClCompile Include="src\texture_manager.cpp" />
@@ -161,6 +163,7 @@
   <ItemGroup>
     <ClInclude Include="include\actor.h" />
     <ClInclude Include="include\clock.h" />
+    <ClInclude Include="include\font_renderer.h" />
     <ClInclude Include="include\game.h" />
     <ClInclude Include="include\destructible.h" />
     <ClInclude Include="include\texture_manager.h" />
@@ -172,6 +175,9 @@
     <Image Include="assets\player_spaceship.png" />
     <Image Include="assets\bullet.png" />
     <Image Include="assets\player_bullet.png" />
+  </ItemGroup>
+  <ItemGroup>
+    <Font Include="assets\font.ttf" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

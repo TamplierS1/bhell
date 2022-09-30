@@ -14,7 +14,8 @@ void TexMan::load_textures(const std::string& path, SDL_Renderer* renderer)
             if (entry.path().extension() == ".png")
             {
                 SDL_Texture* new_texture = nullptr;
-                SDL_Surface* loaded_surface = IMG_Load(entry.path().generic_string().c_str());
+                SDL_Surface* loaded_surface =
+                    IMG_Load(entry.path().generic_string().c_str());
 
                 if (loaded_surface == nullptr)
                 {
@@ -34,11 +35,21 @@ void TexMan::load_textures(const std::string& path, SDL_Renderer* renderer)
 
                 textures[entry.path().stem().generic_string()] =
                     std::make_shared<Texture>(
-                    new_texture, Vec2i{loaded_surface->w, loaded_surface->h});
+                        new_texture, Vec2i{loaded_surface->w, loaded_surface->h});
 
                 SDL_FreeSurface(loaded_surface);
             }
         }
+    }
+}
+
+void TexMan::load_font(const std::string& path, int ptsize)
+{
+    ttf_font = std::make_shared<Font>(TTF_OpenFont(path.c_str(), ptsize));
+    if (ttf_font.get() == nullptr)
+    {
+        printf("Failed to load a font from %s! SDL_TTF error: %s\n", path.c_str(),
+               TTF_GetError());
     }
 }
 
@@ -50,4 +61,20 @@ std::optional<Texture*> TexMan::texture(const std::string& texture_name)
     }
 
     return textures[texture_name].get();
+}
+
+std::shared_ptr<Font> TexMan::font()
+{
+    return ttf_font;
+}
+
+void TexMan::free_assets()
+{
+    // I manually reset them because they need to be freed
+    // before `TTF_Quit()` is called.
+    for (auto& texture : textures)
+    {
+        texture.second.reset();
+    }
+    ttf_font.reset();
 }

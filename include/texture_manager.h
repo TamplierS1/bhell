@@ -1,6 +1,8 @@
 #pragma once
 
 #include <SDL.h>
+#include <SDL_ttf.h>
+
 #include <memory>
 #include <unordered_map>
 #include <optional>
@@ -25,6 +27,22 @@ public:
     Vec2i size;
 };
 
+class Font
+{
+public:
+    Font(TTF_Font* font)
+        : ttf_font(font)
+    {
+    }
+
+    ~Font()
+    {
+        TTF_CloseFont(ttf_font);
+    }
+
+    TTF_Font* ttf_font;
+};
+
 class TexMan
 {
 public:
@@ -38,10 +56,16 @@ public:
     }
 
     void load_textures(const std::string& path, SDL_Renderer* renderer);
+    void load_font(const std::string& path, int ptsize = 18);
+
     std::optional<Texture*> texture(const std::string& texture_name);
+    std::shared_ptr<Font> font();
+
+    void free_assets();
 
 private:
     TexMan() = default;
 
     std::unordered_map<std::string, std::shared_ptr<Texture>> textures;
+    std::shared_ptr<Font> ttf_font;
 };
